@@ -1,0 +1,60 @@
+:root {
+  --bg-1: #f2f6fb;
+  --bg-2: #e0ecf6;
+  --primary: #1565c0;
+  --text-main: #1d2b3a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--text-main);
+  background: linear-gradient(140deg, var(--bg-1), var(--bg-2));
+}
+
+.page-wrap {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.backdrop {
+  position: absolute;
+  top: -80px;
+  right: -40px;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(21, 101, 192, 0.23), rgba(21, 101, 192, 0));
+}
+
+.page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 16px 20px;
+  position: relative;
+}
+
+.panel-card {
+  border-radius: 14px;
+}
+
+.empty-chart {
+  height: 520px;
+  border: 1px dashed rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 768px) {
+  .page-content {
+    padding-top: 20px;
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "trend-forecasting",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "predev": "npm run kill:ports",
+    "dev": "concurrently -k --names py,node,web \"conda run -n trend-forecasting-py python -m uvicorn main:app --host 127.0.0.1 --port 8001 --app-dir backend/python\" \"set PYTHON_API=http://127.0.0.1:8001&& node backend/node/app.js\" \"node frontend/node_modules/vite/bin/vite.js --config frontend/vite.config.js\"",
+    "py:dev": "conda run -n trend-forecasting-py python -m uvicorn main:app --reload --reload-dir backend/python --host 127.0.0.1 --port 8001 --app-dir backend/python",
+    "py:serve": "conda run -n trend-forecasting-py python -m uvicorn main:app --host 127.0.0.1 --port 8001 --app-dir backend/python",
+    "py:install": "conda run -n trend-forecasting-py pip install -r backend/python/requirements.txt",
+    "kill:ports": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ports = 8000,8001,3001,5173; $pids = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $ports -contains $_.LocalPort } | Select-Object -ExpandProperty OwningProcess -Unique; if ($pids) { $pids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Host ('Stopped PIDs: ' + ($pids -join ', ')) } else { Write-Host 'No listening processes found on 8000/8001/3001/5173' }\"",
+    "build": "npm run build --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

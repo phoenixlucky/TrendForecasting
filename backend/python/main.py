@@ -1,0 +1,33 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+
+from prophet_service import run_forecast
+
+
+app = FastAPI(title="Prophet Forecast Service")
+
+
+class DataRow(BaseModel):
+    date: str
+    value: float
+
+
+class ForecastRequest(BaseModel):
+    rows: list[DataRow] = Field(min_length=3)
+    periods: int = Field(default=30, ge=1, le=365)
+
+
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+
+@app.post("/forecast")
+def forecast(payload: ForecastRequest):
+    try:
+        rows = [{"date": row.date, "value": row.value} for row in payload.rows]
+        return run_forecast(rows=rows, periods=payload.periods)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"预测失败: {exc}") from exc
