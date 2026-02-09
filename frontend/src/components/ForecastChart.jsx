@@ -11,33 +11,36 @@ const MODEL_NAME_MAP = {
 
 const MODEL_COLORS = ["#ef6c00", "#2e7d32", "#6a1b9a", "#00838f", "#ad1457", "#5d4037"];
 
-function ForecastChart({ result, precision = 0, selectedModels = ["prophet"] }) {
+function ForecastChart({ result, precision = 0, selectedModels = ["prophet"], chartTitle = "" }) {
   if (!result) {
     return <div className="empty-chart">暂无结果，请先上传并预测</div>;
   }
 
   const history = result.history || [];
+  const historyDateSet = new Set(history.map((item) => item.date));
   const forecastsByModel = result.forecastsByModel || {};
   const activeModels = selectedModels.filter((model) => Array.isArray(forecastsByModel[model]));
   const primaryModel = result.primaryModel || activeModels[0] || "prophet";
   const axisModel = activeModels[0] || primaryModel;
   const axisForecast = forecastsByModel[axisModel] || forecastsByModel[primaryModel] || result.forecast || [];
   const xData = axisForecast.map((item) => item.date);
-  const bandModel = activeModels.length === 1 ? activeModels[0] : primaryModel;
-  const bandForecast = forecastsByModel[bandModel] || axisForecast;
 
   const historyMap = new Map(history.map((item) => [item.date, item.value]));
-  const yLower = bandForecast.map((item) => item.yhat_lower);
-  const bandDiff = bandForecast.map((item) => item.yhat_upper - item.yhat_lower);
   const historySeries = xData.map((d) => historyMap.get(d) ?? null);
 
   const modelSeries = activeModels.map((model, index) => {
     const modelMap = new Map((forecastsByModel[model] || []).map((item) => [item.date, item.yhat]));
+    const modelData = xData.map((date) => {
+      if (model === "sarima" && historyDateSet.has(date)) {
+        return null;
+      }
+      return modelMap.get(date) ?? null;
+    });
     return {
       name: `${MODEL_NAME_MAP[model] || model} 预测`,
       type: "line",
       smooth: true,
-      data: xData.map((date) => modelMap.get(date) ?? null),
+      data: modelData,
       symbol: "none",
       lineStyle: {
         width: 2,
@@ -46,8 +49,6 @@ function ForecastChart({ result, precision = 0, selectedModels = ["prophet"] }) 
       }
     };
   });
-
-  const showBand = activeModels.length <= 1;
 
   const series = [
     {
@@ -61,32 +62,16 @@ function ForecastChart({ result, precision = 0, selectedModels = ["prophet"] }) 
     ...modelSeries
   ];
 
-  if (showBand) {
-    series.push(
-      {
-        name: "区间下界",
-        type: "line",
-        stack: "ci",
-        data: yLower,
-        symbol: "none",
-        lineStyle: { opacity: 0 },
-        areaStyle: { opacity: 0 }
-      },
-      {
-        name: "置信区间",
-        type: "line",
-        stack: "ci",
-        data: bandDiff,
-        symbol: "none",
-        lineStyle: { opacity: 0 },
-        areaStyle: {
-          color: "rgba(239, 108, 0, 0.2)"
-        }
-      }
-    );
-  }
-
   const option = {
+    title: {
+      text: chartTitle || "结果图表",
+      left: "center",
+      top: 0,
+      textStyle: {
+        fontSize: 14,
+        fontWeight: 600
+      }
+    },
     tooltip: {
       trigger: "axis",
       valueFormatter: (value) => {
@@ -97,10 +82,10 @@ function ForecastChart({ result, precision = 0, selectedModels = ["prophet"] }) 
       }
     },
     legend: {
-      top: 0,
-      data: series.filter((s) => s.name !== "区间下界").map((s) => s.name)
+      top: 28,
+      data: series.map((s) => s.name)
     },
-    grid: { left: 72, right: 24, top: 40, bottom: 35, containLabel: true },
+    grid: { left: 72, right: 24, top: 64, bottom: 35, containLabel: true },
     xAxis: {
       type: "category",
       data: xData

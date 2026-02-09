@@ -1,6 +1,6 @@
 # TrendForecasting
 
-Excel -> Prophet 趋势预测 -> 图表展示 的 npm Web 工具示例。
+Excel / SQLite / MySQL 数据库 -> 趋势预测 -> 图表展示 的 npm Web 工具示例。
 
 ## 目录
 
@@ -115,6 +115,8 @@ npm run py:install
 ## API 约定
 
 - 前端调用：`POST /api/forecast`
+- 数据源读取：`POST /api/data/sqlite`、`POST /api/data/mysql`
+- 数据源连通性测试：`POST /api/data/sqlite/test`、`POST /api/data/mysql/test`
 - 请求体：
 
 ```json
@@ -135,3 +137,9 @@ npm run py:install
 
 - 新增：`GET /api/models/status` 获取六个模型安装状态。
 - 新增：`POST /api/models/install` 按模型名称执行安装。
+- 新增：`POST /api/data/sqlite` 直连 SQLite 数据库读取 `date/value` 时序数据。
+- 新增：`POST /api/data/mysql` 直连 MySQL 数据库读取 `date/value` 时序数据。
+- 新增：SQLite / MySQL 均支持填写自定义 SQL（仅 `SELECT`，且结果需包含 `date`、`value` 两列）。
+- 新增：前端可保存数据库连接配置（保存在浏览器 `localStorage`）。
+- 新增：数据库面板支持「测试连接」按钮；填写 SQL 时 `table` 可留空。
+- 新增：测试连接成功后自动保存当前配置；MySQL 密码以加密形式保存到浏览器本地。

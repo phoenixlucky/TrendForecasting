@@ -19,3 +19,23 @@ export async function installModel(model) {
   const { data } = await client.post("/models/install", { model });
   return data;
 }
+
+export async function fetchSqliteRows(payload) {
+  const { data } = await client.post("/data/sqlite", payload);
+  return data;
+}
+
+export async function fetchMysqlRows(payload) {
+  const { data } = await client.post("/data/mysql", payload);
+  return data;
+}
+
+export async function testSqliteConnection(payload) {
+  const { data } = await client.post("/data/sqlite/test", payload);
+  return data;
+}
+
+export async function testMysqlConnection(payload) {
+  const { data } = await client.post("/data/mysql/test", payload);
+  return data;
+}

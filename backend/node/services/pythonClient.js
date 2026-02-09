@@ -42,3 +42,15 @@ export async function requestInstallModel(payload) {
     throw wrapped;
   }
 }
+
+export async function requestSqliteSource(payload) {
+  try {
+    const { data } = await client.post("/source/sqlite", payload);
+    return data;
+  } catch (error) {
+    const detail = error?.response?.data?.detail || "数据库读取失败";
+    const wrapped = new Error(detail);
+    wrapped.status = error?.response?.status || 502;
+    throw wrapped;
+  }
+}

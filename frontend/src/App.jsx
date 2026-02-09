@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Button, Card, Col, InputNumber, Row, Select, Space, Tag, Typography, message } from "antd";
+import { Alert, Button, Card, Col, Input, InputNumber, Row, Select, Space, Tag, Typography, message } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
 import UploadPanel from "./components/UploadPanel";
 import ForecastChart from "./components/ForecastChart";
@@ -15,6 +15,7 @@ const MODEL_OPTIONS = [
   { label: "NeuralProphet", value: "neuralprophet" },
   { label: "Orbit", value: "orbit" }
 ];
+const MODEL_LABEL = Object.fromEntries(MODEL_OPTIONS.map((item) => [item.value, item.label]));
 
 function median(values) {
   if (!values.length) {
@@ -66,10 +67,59 @@ function sanitizeModelForecast(modelRows, historyRows) {
   return { rows, removed };
 }
 
+function formatValue(value, precision) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+  return Number(value).toFixed(precision);
+}
+
+function buildTrendSummary(result, selectedModels, precision) {
+  if (!result) {
+    return null;
+  }
+  const forecastsByModel = result.forecastsByModel || {};
+  const activeModel = selectedModels.find((name) => Array.isArray(forecastsByModel[name])) || result.primaryModel;
+  const modelRows = forecastsByModel[activeModel] || [];
+  const historyRows = result.history || [];
+  if (!modelRows.length || !historyRows.length) {
+    return null;
+  }
+
+  const historyDates = new Set(historyRows.map((item) => item.date));
+  const futureRows = modelRows.filter((item) => !historyDates.has(item.date) && Number.isFinite(item.yhat));
+  if (!futureRows.length) {
+    return null;
+  }
+
+  const historyStart = historyRows[0].value;
+  const historyEnd = historyRows[historyRows.length - 1].value;
+  const futureStart = futureRows[0].yhat;
+  const futureEnd = futureRows[futureRows.length - 1].yhat;
+  const change = futureEnd - futureStart;
+  const changeRate = Math.abs(futureStart) < 1e-9 ? null : (change / Math.abs(futureStart)) * 100;
+  const direction = change > 0 ? "上升" : change < 0 ? "下降" : "横盘";
+
+  const peak = futureRows.reduce((best, row) => (row.yhat > best.yhat ? row : best), futureRows[0]);
+  const trough = futureRows.reduce((best, row) => (row.yhat < best.yhat ? row : best), futureRows[0]);
+  const avg = futureRows.reduce((sum, row) => sum + row.yhat, 0) / futureRows.length;
+
+  return {
+    title: `趋势重点总结（${MODEL_LABEL[activeModel] || activeModel}）`,
+    lines: [
+      `历史区间从 ${formatValue(historyStart, precision)} 变化到 ${formatValue(historyEnd, precision)}。`,
+      `预测区间整体呈${direction}，由 ${formatValue(futureStart, precision)} 变为 ${formatValue(futureEnd, precision)}${changeRate === null ? "" : `（约 ${changeRate.toFixed(2)}%）`}。`,
+      `预测峰值在 ${peak.date}，约 ${formatValue(peak.yhat, precision)}；低点在 ${trough.date}，约 ${formatValue(trough.yhat, precision)}。`,
+      `预测均值约 ${formatValue(avg, precision)}，可作为未来区间的参考中枢。`
+    ]
+  };
+}
+
 function App() {
   const [rows, setRows] = useState([]);
   const [precision, setPrecision] = useState(0);
   const [periods, setPeriods] = useState(30);
+  const [chartTitle, setChartTitle] = useState("趋势预测图");
   const [selectedModels, setSelectedModels] = useState(["prophet"]);
   const [modelStatus, setModelStatus] = useState({ prophet: true });
   const [loadingStatus, setLoadingStatus] = useState(false);
@@ -81,6 +131,10 @@ function App() {
   const installedModels = useMemo(
     () => MODEL_OPTIONS.filter((item) => modelStatus[item.value]).map((item) => item.value),
     [modelStatus]
+  );
+  const trendSummary = useMemo(
+    () => buildTrendSummary(result, selectedModels, precision),
+    [result, selectedModels, precision]
   );
 
   const syncSelectedModels = (nextStatus) => {
@@ -245,7 +299,7 @@ function App() {
       <div className="page-content">
         <Title level={2}>业务趋势预测工作台</Title>
         <Paragraph>
-          上传标准 Excel，系统会自动完成数据校验，并支持 Prophet、ETS、SARIMA、TBATS、NeuralProphet、Orbit 多模型预测对比。
+          支持 Excel 上传或 SQLite 数据库直连，系统会自动完成数据校验，并支持 Prophet、ETS、SARIMA、TBATS、NeuralProphet、Orbit 多模型预测对比。
         </Paragraph>
 
         <Row gutter={[16, 16]}>
@@ -259,6 +313,14 @@ function App() {
                 <Space>
                   预测天数:
                   <InputNumber min={1} max={365} value={periods} onChange={(v) => setPeriods(v || 30)} />
+                </Space>
+                <Space direction="vertical" style={{ width: "100%" }} size={6}>
+                  <span>图表标题:</span>
+                  <Input
+                    value={chartTitle}
+                    placeholder="请输入图表标题"
+                    onChange={(event) => setChartTitle(event.target.value)}
+                  />
                 </Space>
                 <Space direction="vertical" style={{ width: "100%" }} size={6}>
                   <Button type="primary" loading={loading} onClick={handlePredict}>
@@ -319,7 +381,7 @@ function App() {
 
           <Col xs={24} lg={16}>
             <Card
-              title="2) 结果图表"
+              title={`2) ${chartTitle || "结果图表"}`}
               className="panel-card"
               extra={
                 <Button icon={<DownloadOutlined />} onClick={downloadForecast} disabled={!result?.predictedRows?.length}>
@@ -327,7 +389,22 @@ function App() {
                 </Button>
               }
             >
-              <ForecastChart result={result} precision={precision} selectedModels={selectedModels} />
+              <ForecastChart result={result} precision={precision} selectedModels={selectedModels} chartTitle={chartTitle} />
+              {trendSummary && (
+                <Alert
+                  style={{ marginTop: 12 }}
+                  type="info"
+                  showIcon
+                  message={trendSummary.title}
+                  description={
+                    <div>
+                      {trendSummary.lines.map((line) => (
+                        <div key={line}>{line}</div>
+                      ))}
+                    </div>
+                  }
+                />
+              )}
             </Card>
           </Col>
         </Row>
