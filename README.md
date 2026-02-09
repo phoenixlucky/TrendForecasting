@@ -79,6 +79,21 @@ npm run py:install
 
 - Windows 下停止一键启动时，建议在 PowerShell 里按 `Ctrl+C` 一次；当前脚本已去掉嵌套 `npm run`，避免卡在 `Terminate batch job (Y/N)`。
 
+## 模型说明
+
+- `prophet`：适合带趋势和节假日/季节性的业务时间序列，配置简单，解释性较好。
+- `ets`：指数平滑模型（Error-Trend-Seasonality），对短期平稳趋势预测很常用，训练速度快。
+- `sarima`：季节性 ARIMA，擅长处理自相关和季节性结构明显的序列。
+- `tbats`：适合复杂季节性（如多重季节周期）场景，对波动型业务序列更灵活。
+- `neuralprophet`：在 Prophet 思路上引入神经网络能力，能更好拟合非线性模式。
+- `orbit`：Bayesian 时序框架（这里用 DLT），在趋势建模与不确定性表达方面比较现代化。
+
+建议：
+
+- 数据量较小、追求稳定可解释：优先 `prophet`、`ets`、`sarima`。
+- 季节性复杂或非线性明显：尝试 `tbats`、`neuralprophet`、`orbit`。
+- 实际使用时建议多模型一起跑，用图表和误差指标共同判断。
+
 ## API 约定
 
 - 前端调用：`POST /api/forecast`
