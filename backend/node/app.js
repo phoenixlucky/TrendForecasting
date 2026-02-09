@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import forecastRouter from "./routes/forecast.js";
+import modelsRouter from "./routes/models.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -13,6 +14,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/forecast", forecastRouter);
+app.use("/api/models", modelsRouter);
 
 app.use((err, _req, res, _next) => {
   const status = err.status || 500;

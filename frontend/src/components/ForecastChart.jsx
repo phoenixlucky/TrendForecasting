@@ -20,12 +20,15 @@ function ForecastChart({ result, precision = 0, selectedModels = ["prophet"] }) 
   const forecastsByModel = result.forecastsByModel || {};
   const activeModels = selectedModels.filter((model) => Array.isArray(forecastsByModel[model]));
   const primaryModel = result.primaryModel || activeModels[0] || "prophet";
-  const primaryForecast = forecastsByModel[primaryModel] || result.forecast || [];
-  const xData = primaryForecast.map((item) => item.date);
+  const axisModel = activeModels[0] || primaryModel;
+  const axisForecast = forecastsByModel[axisModel] || forecastsByModel[primaryModel] || result.forecast || [];
+  const xData = axisForecast.map((item) => item.date);
+  const bandModel = activeModels.length === 1 ? activeModels[0] : primaryModel;
+  const bandForecast = forecastsByModel[bandModel] || axisForecast;
 
   const historyMap = new Map(history.map((item) => [item.date, item.value]));
-  const yLower = primaryForecast.map((item) => item.yhat_lower);
-  const bandDiff = primaryForecast.map((item) => item.yhat_upper - item.yhat_lower);
+  const yLower = bandForecast.map((item) => item.yhat_lower);
+  const bandDiff = bandForecast.map((item) => item.yhat_upper - item.yhat_lower);
   const historySeries = xData.map((d) => historyMap.get(d) ?? null);
 
   const modelSeries = activeModels.map((model, index) => {
@@ -87,7 +90,7 @@ function ForecastChart({ result, precision = 0, selectedModels = ["prophet"] }) 
     tooltip: {
       trigger: "axis",
       valueFormatter: (value) => {
-        if (value === null || value === undefined || value === "-") {
+        if (value === null || value === undefined || value === "-" || !Number.isFinite(Number(value))) {
           return "-";
         }
         return Number(value).toFixed(precision);
@@ -106,13 +109,13 @@ function ForecastChart({ result, precision = 0, selectedModels = ["prophet"] }) 
       type: "value",
       scale: true,
       axisLabel: {
-        formatter: (value) => Number(value).toFixed(precision)
+        formatter: (value) => (Number.isFinite(Number(value)) ? Number(value).toFixed(precision) : "-")
       }
     },
     series
   };
 
-  return <ReactECharts style={{ height: 520 }} option={option} />;
+  return <ReactECharts style={{ height: 520 }} option={option} notMerge />;
 }
 
 export default ForecastChart;

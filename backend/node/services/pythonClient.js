@@ -18,3 +18,27 @@ export async function requestForecast(payload) {
     throw wrapped;
   }
 }
+
+export async function requestModelStatus() {
+  try {
+    const { data } = await client.get("/models/status");
+    return data;
+  } catch (error) {
+    const detail = error?.response?.data?.detail || "获取模型状态失败";
+    const wrapped = new Error(detail);
+    wrapped.status = 502;
+    throw wrapped;
+  }
+}
+
+export async function requestInstallModel(payload) {
+  try {
+    const { data } = await client.post("/models/install", payload);
+    return data;
+  } catch (error) {
+    const detail = error?.response?.data?.detail || "模型安装失败";
+    const wrapped = new Error(detail);
+    wrapped.status = error?.response?.status || 502;
+    throw wrapped;
+  }
+}

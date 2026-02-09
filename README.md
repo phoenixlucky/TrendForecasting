@@ -31,7 +31,7 @@ conda env create -f backend/python/environment.yml
 npm run py:install
 ```
 
-说明：`requirements.txt` 已固定 `numpy<2` 和 `prophet==1.1.5`，避免 Windows 下的 Prophet 兼容性问题。
+说明：环境初始化默认仅安装 `prophet`（以及服务运行基础依赖），其余模型可在前端按需点击安装。
 
 3. 一键启动前端 + Node + Python
 
@@ -88,6 +88,24 @@ npm run py:install
 - `neuralprophet`：在 Prophet 思路上引入神经网络能力，能更好拟合非线性模式。
 - `orbit`：Bayesian 时序框架（这里用 DLT），在趋势建模与不确定性表达方面比较现代化。
 
+### 模型大小与资源开销（经验值）
+
+这里的“大小”主要指依赖体积、内存占用和训练耗时的综合感受（同样数据量下）：
+
+| 模型 | 体量级别 | 训练耗时 | 内存占用 | 说明 |
+| --- | --- | --- | --- | --- |
+| `ets` | 小 | 快 | 低 | 轻量级统计模型，适合快速基线 |
+| `sarima` | 小-中 | 中 | 低-中 | 参数搜索时耗时会上升 |
+| `prophet` | 中 | 中 | 中 | 依赖 Stan，稳定但不算最轻 |
+| `tbats` | 中-大 | 中-慢 | 中 | 复杂季节性能力强，代价更高 |
+| `orbit` | 中-大 | 中-慢 | 中-高 | 贝叶斯建模更灵活，计算开销更大 |
+| `neuralprophet` | 大 | 慢 | 高 | 神经网络方案，对 CPU/内存更敏感 |
+
+提示：
+
+- 如果机器配置一般，建议先用 `ets`、`sarima`、`prophet` 做主流程。
+- 多模型对比时可先跑轻量模型，再按需开启 `tbats` / `neuralprophet` / `orbit`。
+
 建议：
 
 - 数据量较小、追求稳定可解释：优先 `prophet`、`ets`、`sarima`。
@@ -114,3 +132,6 @@ npm run py:install
   - `failed_models`: 失败模型及原因
 
 可选模型：`prophet`、`ets`、`sarima`、`tbats`、`neuralprophet`、`orbit`。
+
+- 新增：`GET /api/models/status` 获取六个模型安装状态。
+- 新增：`POST /api/models/install` 按模型名称执行安装。
