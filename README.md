@@ -87,10 +87,15 @@ npm run py:install
 ```json
 {
   "rows": [{ "date": "2023-01-01", "value": 120 }],
-  "periods": 30
+  "periods": 30,
+  "models": ["prophet", "ets", "sarima"]
 }
 ```
 
 - 返回体包含：
   - `history`: 原始数据（date/value）
-  - `forecast`: 预测结果（date/yhat/yhat_lower/yhat_upper）
+  - `forecast`: 主模型预测结果（date/yhat/yhat_lower/yhat_upper）
+  - `forecasts_by_model`: 各模型预测结果
+  - `failed_models`: 失败模型及原因
+
+可选模型：`prophet`、`ets`、`sarima`、`tbats`、`neuralprophet`、`orbit`。
