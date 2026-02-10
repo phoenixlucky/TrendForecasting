@@ -39,6 +39,8 @@ npm run py:install
 npm run dev
 ```
 
+Windows 也可以直接双击根目录下的 `start-dev.bat` 一键启动（会自动检查并安装 Node 依赖后再启动）。
+
 在项目根目录执行，默认服务端口：
 
 - 前端：`http://localhost:5173`
@@ -142,4 +144,6 @@ npm run py:install
 - 新增：SQLite / MySQL 均支持填写自定义 SQL（仅 `SELECT`，且结果需包含 `date`、`value` 两列）。
 - 新增：前端可保存数据库连接配置（保存在浏览器 `localStorage`）。
 - 新增：数据库面板支持「测试连接」按钮；填写 SQL 时 `table` 可留空。
-- 新增：测试连接成功后自动保存当前配置；MySQL 密码以加密形式保存到浏览器本地。
+- 新增：测试连接成功后自动保存当前配置；MySQL 密码不会写入本地保存项。
+- 新增：数据库面板支持「一键启动」（读取数据并直接触发预测）。
+- 新增：SQLite / MySQL 支持保存多套 SQL 连接配置，并可下拉切换与删除。

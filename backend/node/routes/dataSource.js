@@ -124,7 +124,7 @@ router.post("/mysql", async (req, res, next) => {
       if (customSql.includes("?")) {
         return res.status(400).json({ detail: "自定义 SQL 不支持参数占位符 ?" });
       }
-      query = `SELECT date, value FROM (${customSql}) AS subq LIMIT ${safeLimit}`;
+      query = `SELECT * FROM (${customSql}) AS subq LIMIT ${safeLimit}`;
       usePrepared = false;
     } else {
       const where = [];
@@ -157,13 +157,17 @@ router.post("/mysql", async (req, res, next) => {
     let precision = 0;
     const rows = rawRows
       .map((item) => {
-        const rawDate = item?.date;
+        const values = Array.isArray(item) ? item : Object.values(item || {});
+        if (values.length < 2) {
+          return null;
+        }
+        const rawDate = values[0];
         const date = rawDate instanceof Date ? rawDate.toISOString().slice(0, 10) : String(rawDate ?? "").trim().slice(0, 10);
-        const value = Number(item?.value);
+        const value = Number(values[1]);
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(value)) {
           return null;
         }
-        precision = Math.max(precision, countDecimalPlaces(item?.value));
+        precision = Math.max(precision, countDecimalPlaces(values[1]));
         return { date, value };
       })
       .filter(Boolean);

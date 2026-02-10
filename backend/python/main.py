@@ -127,7 +127,7 @@ def load_sqlite_source(payload: SqliteSourceRequest):
             raise HTTPException(status_code=400, detail="SQL 仅支持 SELECT 查询")
         if ";" in custom_sql:
             raise HTTPException(status_code=400, detail="SQL 不允许包含分号")
-        query = f"SELECT date, value FROM ({custom_sql}) AS subq LIMIT ?"
+        query = f"SELECT * FROM ({custom_sql}) AS subq LIMIT ?"
         params.append(payload.limit)
     else:
         if not table:
@@ -160,7 +160,10 @@ def load_sqlite_source(payload: SqliteSourceRequest):
 
     rows: list[dict] = []
     precision = 0
-    for raw_date, raw_value in raw_rows:
+    for raw_row in raw_rows:
+        if not raw_row or len(raw_row) < 2:
+            continue
+        raw_date, raw_value = raw_row[0], raw_row[1]
         try:
             value = float(raw_value)
         except (TypeError, ValueError):

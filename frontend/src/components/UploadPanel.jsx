@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Button, Input, InputNumber, Space, Tabs, Upload, message } from "antd";
+import { Alert, Button, Input, InputNumber, Select, Space, Tabs, Upload, message } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 import { parseExcelRows } from "../utils/excel";
 import { fetchMysqlRows, fetchSqliteRows, testMysqlConnection, testSqliteConnection } from "../services/api";
@@ -7,6 +7,31 @@ import { fetchMysqlRows, fetchSqliteRows, testMysqlConnection, testSqliteConnect
 const { TextArea } = Input;
 const SQLITE_CONFIG_KEY = "trend-forecasting-sqlite-config";
 const MYSQL_CONFIG_KEY = "trend-forecasting-mysql-config";
+const SQLITE_PROFILES_KEY = "trend-forecasting-sqlite-profiles";
+const MYSQL_PROFILES_KEY = "trend-forecasting-mysql-profiles";
+
+function loadProfiles(key) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistProfiles(key, profiles) {
+  localStorage.setItem(key, JSON.stringify(profiles));
+}
+
+function upsertProfile(list, profile) {
+  const idx = list.findIndex((item) => item.name === profile.name);
+  if (idx === -1) {
+    return [...list, profile];
+  }
+  const next = [...list];
+  next[idx] = profile;
+  return next;
+}
 
 function countDecimalPlaces(value) {
   if (!Number.isFinite(value)) {
@@ -31,25 +56,25 @@ function UploadPanel({ onValidRows }) {
     try {
       const saved = JSON.parse(localStorage.getItem(SQLITE_CONFIG_KEY) || "{}");
       return {
+        name: saved.name || "",
         dbPath: saved.dbPath || "",
-        sql: saved.sql || "",
-        limit: saved.limit || 5000
+        sql: saved.sql || ""
       };
     } catch {
-      return { dbPath: "", sql: "", limit: 5000 };
+      return { name: "", dbPath: "", sql: "" };
     }
   });
   const [mysqlConfig, setMysqlConfig] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(MYSQL_CONFIG_KEY) || "{}");
       return {
+        name: saved.name || "",
         host: saved.host || "127.0.0.1",
         port: saved.port || 3306,
         user: saved.user || "",
         password: "",
         database: saved.database || "",
-        sql: saved.sql || "",
-        limit: saved.limit || 5000
+        sql: saved.sql || ""
       };
     } catch {
       return {
@@ -58,41 +83,90 @@ function UploadPanel({ onValidRows }) {
         user: "",
         password: "",
         database: "",
-        sql: "",
-        limit: 5000
+        name: "",
+        sql: ""
       };
     }
   });
+  const [sqliteProfiles, setSqliteProfiles] = useState(() => loadProfiles(SQLITE_PROFILES_KEY));
+  const [mysqlProfiles, setMysqlProfiles] = useState(() => loadProfiles(MYSQL_PROFILES_KEY));
 
   const saveSqliteConfig = ({ notify = true } = {}) => {
+    if (!dbConfig.name.trim()) {
+      message.warning("请先填写 SQLite 连接名称");
+      return;
+    }
     localStorage.setItem(
       SQLITE_CONFIG_KEY,
       JSON.stringify({
+        name: dbConfig.name,
         dbPath: dbConfig.dbPath,
-        sql: dbConfig.sql,
-        limit: dbConfig.limit
+        sql: dbConfig.sql
       })
     );
+    const nextProfiles = upsertProfile(sqliteProfiles, {
+      name: dbConfig.name.trim(),
+      dbPath: dbConfig.dbPath,
+      sql: dbConfig.sql
+    });
+    setSqliteProfiles(nextProfiles);
+    persistProfiles(SQLITE_PROFILES_KEY, nextProfiles);
     if (notify) {
       message.success("SQLite 连接配置已保存");
     }
   };
 
-  const saveMysqlConfig = async ({ notify = true } = {}) => {
+  const saveMysqlConfig = ({ notify = true } = {}) => {
+    if (!mysqlConfig.name.trim()) {
+      message.warning("请先填写 MySQL 连接名称");
+      return;
+    }
     localStorage.setItem(
       MYSQL_CONFIG_KEY,
       JSON.stringify({
+        name: mysqlConfig.name,
         host: mysqlConfig.host,
         port: mysqlConfig.port,
         user: mysqlConfig.user,
         database: mysqlConfig.database,
-        sql: mysqlConfig.sql,
-        limit: mysqlConfig.limit
+        sql: mysqlConfig.sql
       })
     );
+    const nextProfiles = upsertProfile(mysqlProfiles, {
+      name: mysqlConfig.name.trim(),
+      host: mysqlConfig.host,
+      port: mysqlConfig.port,
+      user: mysqlConfig.user,
+      database: mysqlConfig.database,
+      sql: mysqlConfig.sql
+    });
+    setMysqlProfiles(nextProfiles);
+    persistProfiles(MYSQL_PROFILES_KEY, nextProfiles);
     if (notify) {
       message.success("MySQL 连接配置已保存");
     }
+  };
+
+  const deleteSqliteProfile = () => {
+    if (!dbConfig.name.trim()) {
+      message.warning("请先选择或填写要删除的 SQLite 连接名称");
+      return;
+    }
+    const nextProfiles = sqliteProfiles.filter((item) => item.name !== dbConfig.name.trim());
+    setSqliteProfiles(nextProfiles);
+    persistProfiles(SQLITE_PROFILES_KEY, nextProfiles);
+    message.success("SQLite 连接配置已删除");
+  };
+
+  const deleteMysqlProfile = () => {
+    if (!mysqlConfig.name.trim()) {
+      message.warning("请先选择或填写要删除的 MySQL 连接名称");
+      return;
+    }
+    const nextProfiles = mysqlProfiles.filter((item) => item.name !== mysqlConfig.name.trim());
+    setMysqlProfiles(nextProfiles);
+    persistProfiles(MYSQL_PROFILES_KEY, nextProfiles);
+    message.success("MySQL 连接配置已删除");
   };
 
   const beforeUpload = async (file) => {
@@ -124,7 +198,7 @@ function UploadPanel({ onValidRows }) {
         sql: dbConfig.sql.trim() || null,
         startDate: null,
         endDate: null,
-        limit: dbConfig.limit || 5000
+        limit: 5000
       });
       const rows = (data?.rows || []).sort((a, b) => String(a.date).localeCompare(String(b.date)));
       const precision = rows.reduce((max, item) => Math.max(max, countDecimalPlaces(item.value)), 0);
@@ -178,7 +252,7 @@ function UploadPanel({ onValidRows }) {
         sql: mysqlConfig.sql.trim() || null,
         startDate: null,
         endDate: null,
-        limit: mysqlConfig.limit || 5000
+        limit: 5000
       });
       const rows = (data?.rows || []).sort((a, b) => String(a.date).localeCompare(String(b.date)));
       const precision = rows.reduce((max, item) => Math.max(max, countDecimalPlaces(item.value)), 0);
@@ -216,7 +290,7 @@ function UploadPanel({ onValidRows }) {
         database: mysqlConfig.database
       });
       message.success(data?.detail || "MySQL 连接成功");
-      await saveMysqlConfig({ notify: false });
+      saveMysqlConfig({ notify: false });
     } catch (error) {
       const status = error?.response?.status;
       let detail = error?.response?.data?.detail || error.message || "MySQL 连接失败";
@@ -257,7 +331,27 @@ function UploadPanel({ onValidRows }) {
             key: "sqlite",
             label: "SQLite 直连",
             children: (
-              <Space direction="vertical" style={{ width: "100%" }} size={8}>
+              <Space direction="vertical" style={{ width: "100%" }} size={10} className="datasource-pane">
+                <Space style={{ width: "100%" }} className="profile-row" align="start">
+                  <Input
+                    placeholder="连接名称，例如 sqlite-销售库"
+                    value={dbConfig.name}
+                    style={{ flex: 1 }}
+                    onChange={(e) => setDbConfig((prev) => ({ ...prev, name: e.target.value }))}
+                  />
+                  <Select
+                    placeholder="选择已保存连接"
+                    value={dbConfig.name || undefined}
+                    onChange={(name) => {
+                      const profile = sqliteProfiles.find((item) => item.name === name);
+                      if (profile) {
+                        setDbConfig((prev) => ({ ...prev, ...profile }));
+                      }
+                    }}
+                    options={sqliteProfiles.map((item) => ({ label: item.name, value: item.name }))}
+                    style={{ minWidth: 150 }}
+                  />
+                </Space>
                 <Input
                   placeholder="SQLite 文件路径，例如 D:\\data\\sales.db"
                   value={dbConfig.dbPath}
@@ -265,19 +359,11 @@ function UploadPanel({ onValidRows }) {
                 />
                 <TextArea
                   rows={4}
-                  placeholder="填写 SQL（仅 SELECT，需返回 date/value 两列）"
+                  placeholder="填写 SQL（仅 SELECT，系统自动将第1列映射为 date、第2列映射为 value）"
                   value={dbConfig.sql}
                   onChange={(e) => setDbConfig((prev) => ({ ...prev, sql: e.target.value }))}
                 />
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={1}
-                  max={50000}
-                  value={dbConfig.limit}
-                  onChange={(value) => setDbConfig((prev) => ({ ...prev, limit: value || 5000 }))}
-                  addonBefore="最大读取行数"
-                />
-                <Space>
+                <Space wrap className="action-row" size={[8, 8]}>
                   <Button type="default" loading={loadingDb} onClick={loadFromSqlite}>
                     从数据库读取
                   </Button>
@@ -285,6 +371,9 @@ function UploadPanel({ onValidRows }) {
                     测试连接
                   </Button>
                   <Button onClick={saveSqliteConfig}>保存连接配置</Button>
+                  <Button danger onClick={deleteSqliteProfile}>
+                    删除连接
+                  </Button>
                 </Space>
               </Space>
             )
@@ -293,7 +382,27 @@ function UploadPanel({ onValidRows }) {
             key: "mysql",
             label: "MySQL 直连",
             children: (
-              <Space direction="vertical" style={{ width: "100%" }} size={8}>
+              <Space direction="vertical" style={{ width: "100%" }} size={10} className="datasource-pane">
+                <Space style={{ width: "100%" }} className="profile-row" align="start">
+                  <Input
+                    placeholder="连接名称，例如 mysql-生产库"
+                    value={mysqlConfig.name}
+                    style={{ flex: 1 }}
+                    onChange={(e) => setMysqlConfig((prev) => ({ ...prev, name: e.target.value }))}
+                  />
+                  <Select
+                    placeholder="选择已保存连接"
+                    value={mysqlConfig.name || undefined}
+                    onChange={(name) => {
+                      const profile = mysqlProfiles.find((item) => item.name === name);
+                      if (profile) {
+                        setMysqlConfig((prev) => ({ ...prev, ...profile, password: "" }));
+                      }
+                    }}
+                    options={mysqlProfiles.map((item) => ({ label: item.name, value: item.name }))}
+                    style={{ minWidth: 150 }}
+                  />
+                </Space>
                 <Space.Compact block>
                   <Input
                     placeholder="Host，例如 127.0.0.1"
@@ -328,19 +437,11 @@ function UploadPanel({ onValidRows }) {
                 />
                 <TextArea
                   rows={4}
-                  placeholder="填写 SQL（仅 SELECT，需返回 date/value 两列）"
+                  placeholder="填写 SQL（仅 SELECT，系统自动将第1列映射为 date、第2列映射为 value）"
                   value={mysqlConfig.sql}
                   onChange={(e) => setMysqlConfig((prev) => ({ ...prev, sql: e.target.value }))}
                 />
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={1}
-                  max={50000}
-                  value={mysqlConfig.limit}
-                  onChange={(value) => setMysqlConfig((prev) => ({ ...prev, limit: value || 5000 }))}
-                  addonBefore="最大读取行数"
-                />
-                <Space>
+                <Space wrap className="action-row" size={[8, 8]}>
                   <Button type="default" loading={loadingDb} onClick={loadFromMysql}>
                     从 MySQL 读取
                   </Button>
@@ -348,6 +449,9 @@ function UploadPanel({ onValidRows }) {
                     测试连接
                   </Button>
                   <Button onClick={() => saveMysqlConfig()}>保存连接配置</Button>
+                  <Button danger onClick={deleteMysqlProfile}>
+                    删除连接
+                  </Button>
                 </Space>
               </Space>
             )

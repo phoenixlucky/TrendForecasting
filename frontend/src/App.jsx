@@ -304,7 +304,17 @@ function App() {
 
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={8}>
-            <Card title="1) 数据准备" className="panel-card prep-card">
+            <Card
+              title={
+                <div className="prep-header">
+                  <span>1) 数据准备</span>
+                  <Button type="primary" loading={loading} onClick={handlePredict}>
+                    开始预测
+                  </Button>
+                </div>
+              }
+              className="panel-card prep-card"
+            >
               <Space direction="vertical" style={{ width: "100%" }} size="middle">
                 <Button icon={<DownloadOutlined />} onClick={downloadTemplate}>
                   下载标准模板
@@ -321,11 +331,6 @@ function App() {
                     placeholder="请输入图表标题"
                     onChange={(event) => setChartTitle(event.target.value)}
                   />
-                </Space>
-                <Space direction="vertical" style={{ width: "100%" }} size={6}>
-                  <Button type="primary" loading={loading} onClick={handlePredict}>
-                    开始预测
-                  </Button>
                 </Space>
                 <Space direction="vertical" style={{ width: "100%" }} size={6}>
                   <span>模型选择:</span>

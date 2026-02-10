@@ -3,6 +3,8 @@
   --bg-2: #e0ecf6;
   --primary: #1565c0;
   --text-main: #1d2b3a;
+  --panel-bg: rgba(255, 255, 255, 0.88);
+  --panel-border: rgba(21, 101, 192, 0.14);
 }
 
 * {
@@ -32,6 +34,17 @@ body {
   background: radial-gradient(circle at center, rgba(21, 101, 192, 0.23), rgba(21, 101, 192, 0));
 }
 
+.backdrop::after {
+  content: "";
+  position: absolute;
+  left: -520px;
+  top: 180px;
+  width: 640px;
+  height: 640px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0));
+}
+
 .page-content {
   max-width: 1200px;
   margin: 0 auto;
@@ -41,6 +54,51 @@ body {
 
 .panel-card {
   border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  box-shadow: 0 14px 30px rgba(19, 54, 98, 0.08);
+  backdrop-filter: blur(4px);
+}
+
+.panel-card .ant-card-head {
+  border-bottom: 1px solid rgba(21, 101, 192, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(245, 249, 255, 0.75));
+}
+
+.panel-card .ant-card-head-title {
+  color: #103965;
+  font-weight: 700;
+}
+
+.prep-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.datasource-pane {
+  padding: 6px;
+  border: 1px dashed rgba(21, 101, 192, 0.22);
+  border-radius: 10px;
+  background: rgba(248, 251, 255, 0.85);
+}
+
+.profile-row {
+  display: flex;
+}
+
+.profile-row .ant-space-item:first-child {
+  flex: 1;
+}
+
+.action-row {
+  width: 100%;
+}
+
+.action-row .ant-btn {
+  min-width: 110px;
 }
 
 .empty-chart {
@@ -56,5 +114,14 @@ body {
 @media (max-width: 768px) {
   .page-content {
     padding-top: 20px;
+  }
+
+  .action-row .ant-btn {
+    width: 100%;
+  }
+
+  .prep-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
